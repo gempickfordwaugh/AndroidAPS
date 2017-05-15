@@ -10,7 +10,8 @@ public class AutosensData {
     long time = 0L;
     public String pastSensitivity = "";
     public double deviation = 0d;
-    boolean calculateWithDeviation = false;
+    boolean nonCarbsDeviation = false;
+    boolean nonEqualDeviation = false;
     double absorbed = 0d;
     double carbsFromBolus = 0d;
     public double cob = 0;
