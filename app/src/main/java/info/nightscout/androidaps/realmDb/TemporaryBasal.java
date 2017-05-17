@@ -23,18 +23,18 @@ public class TemporaryBasal extends RealmObject implements Interval {
 
     @PrimaryKey
     @Index
-    long startDate = 0;
+    public long startDate = 0;
 
     @Index
-    boolean isValid = true;
+    public boolean isValid = true;
 
-    int source = Source.NONE;
-    long _id = 0; // NS _id
+    public int source = Source.NONE;
+    public String _id = null; // NS _id
 
-    int durationInMinutes = 0; // duration == 0 means end of temp basal
-    boolean isAbsolute = false;
-    int percentRate = 0;
-    double absoluteRate = 0d;
+    public int durationInMinutes = 0; // duration == 0 means end of temp basal
+    public boolean isAbsolute = false;
+    public int percentRate = 0;
+    public double absoluteRate = 0d;
 
 
     // -------- Interval interface ---------
