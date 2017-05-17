@@ -48,6 +48,7 @@ import info.nightscout.utils.OKDialog;
 import info.nightscout.utils.PasswordProtection;
 import info.nightscout.utils.SP;
 import info.nightscout.utils.ToastUtils;
+import io.realm.Realm;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private static Logger log = LoggerFactory.getLogger(MainActivity.class);
@@ -78,6 +79,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (Config.logFunctionCalls)
             log.debug("onCreate");
 
+        Realm.init(this);
         registerBus();
         setUpTabs(false);
     }
