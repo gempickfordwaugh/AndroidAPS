@@ -8,7 +8,6 @@ import org.json.JSONObject;
 
 import java.util.Date;
 
-import info.nightscout.androidaps.db.DbRequest;
 import io.realm.RealmObject;
 import io.realm.annotations.Index;
 import io.realm.annotations.PrimaryKey;
@@ -20,10 +19,8 @@ import io.realm.annotations.PrimaryKey;
 public class DatabaseRequest extends RealmObject {
     @PrimaryKey
     @Index
-    public long date;
-
-    @Index
     public String nsClientID = null;
+
     @Index
     public String _id = null;
     public String action = null;
@@ -31,12 +28,10 @@ public class DatabaseRequest extends RealmObject {
     public String data = null;
 
     public DatabaseRequest() {
-        date = new Date().getTime();
     }
 
     // dbAdd
     public DatabaseRequest(String action, String collection, String nsClientID, JSONObject data) {
-        this();
         this.action = action;
         this.collection = collection;
         this.data = data.toString();
@@ -46,7 +41,6 @@ public class DatabaseRequest extends RealmObject {
 
     // dbUpdate, dbUpdateUnset
     public DatabaseRequest(String action, String collection, String nsClientID, String _id, JSONObject data) {
-        this();
         this.action = action;
         this.collection = collection;
         this.data = data.toString();
@@ -56,7 +50,6 @@ public class DatabaseRequest extends RealmObject {
 
     // dbRemove
     public DatabaseRequest(String action, String collection, String nsClientID, String _id) {
-        this();
         this.action = action;
         this.collection = collection;
         this.data = new JSONObject().toString();
@@ -82,8 +75,8 @@ public class DatabaseRequest extends RealmObject {
         return object;
     }
 
-    public static DbRequest fromJSON(JSONObject jsonObject) {
-        DbRequest result = new DbRequest();
+    public static DatabaseRequest fromJSON(JSONObject jsonObject) {
+        DatabaseRequest result = new DatabaseRequest();
         try {
             if (jsonObject.has("action"))
                 result.action = jsonObject.getString("action");

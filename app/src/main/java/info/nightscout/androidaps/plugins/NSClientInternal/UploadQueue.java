@@ -3,24 +3,17 @@ package info.nightscout.androidaps.plugins.NSClientInternal;
 import android.content.Context;
 import android.content.Intent;
 
-import com.j256.ormlite.dao.CloseableIterator;
-
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.List;
 
 import info.nightscout.androidaps.MainApp;
-import info.nightscout.androidaps.db.DatabaseHelper;
-import info.nightscout.androidaps.db.DbRequest;
 import info.nightscout.androidaps.plugins.NSClientInternal.services.NSClientService;
-import info.nightscout.utils.SP;
+import info.nightscout.androidaps.realmDb.DatabaseRequest;
+import info.nightscout.androidaps.realmDb.RealmDBHelper;
 
 /**
  * Created by mike on 21.02.2016.
@@ -29,11 +22,11 @@ public class UploadQueue {
     private static Logger log = LoggerFactory.getLogger(UploadQueue.class);
 
     public static String status() {
-        return "QUEUE: " + MainApp.getDbHelper().size(DatabaseHelper.DATABASE_DBREQUESTS);
+        return "QUEUE: " + size();
     }
 
     public static long size() {
-        return MainApp.getDbHelper().size(DatabaseHelper.DATABASE_DBREQUESTS);
+        return RealmDBHelper.getDatabaseRequestsCount();
     }
 
     private static void startService() {
@@ -47,14 +40,14 @@ public class UploadQueue {
         }
     }
 
-    public static void add(final DbRequest dbr) {
+    public static void add(final DatabaseRequest dbr) {
         startService();
         if (NSClientService.handler != null) {
             NSClientService.handler.post(new Runnable() {
                 @Override
                 public void run() {
                     log.debug("QUEUE adding: " + dbr.data);
-                    MainApp.getDbHelper().create(dbr);
+                    RealmDBHelper.add(dbr);
                     NSClientInternalPlugin plugin = (NSClientInternalPlugin) MainApp.getSpecificPlugin(NSClientInternalPlugin.class);
                     if (plugin != null) {
                         plugin.resend("newdata");
@@ -71,7 +64,7 @@ public class UploadQueue {
                 @Override
                 public void run() {
                     log.debug("QUEUE ClearQueue");
-                    MainApp.getDbHelper().deleteAllDbRequests();
+                    RealmDBHelper.delete(DatabaseRequest.class);
                     log.debug(status());
                 }
             });
@@ -91,9 +84,8 @@ public class UploadQueue {
                         } else {
                             return;
                         }
-                        if (MainApp.getDbHelper().deleteDbRequest(id) == 1) {
+                        if (RealmDBHelper.deleteDatabaseRequest(id) >= 1)
                             log.debug("Removed item from UploadQueue. " + UploadQueue.status());
-                        }
                     } catch (JSONException e) {
                         e.printStackTrace();
                     }
@@ -108,7 +100,7 @@ public class UploadQueue {
             NSClientService.handler.post(new Runnable() {
                 @Override
                 public void run() {
-                    MainApp.getDbHelper().deleteDbRequestbyMongoId(action, _id);
+                    RealmDBHelper.deleteDatabaseRequest(action, _id);
                 }
             });
         }
@@ -116,22 +108,12 @@ public class UploadQueue {
 
     public String textList() {
         String result = "";
-        CloseableIterator<DbRequest> iterator = null;
-        try {
-            iterator = MainApp.getDbHelper().getDaoDbRequest().closeableIterator();
-            try {
-                while (iterator.hasNext()) {
-                    DbRequest dbr = iterator.next();
-                    result += "<br>";
-                    result += dbr.action.toUpperCase() + " ";
-                    result += dbr.collection + ": ";
-                    result += dbr.data;
-                }
-            } finally {
-                iterator.close();
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        List<DatabaseRequest> list = RealmDBHelper.getDatabaseRequests();
+        for (DatabaseRequest dbr : list) {
+            result += "<br>";
+            result += dbr.action.toUpperCase() + " ";
+            result += dbr.collection + ": ";
+            result += dbr.data;
         }
         return result;
     }

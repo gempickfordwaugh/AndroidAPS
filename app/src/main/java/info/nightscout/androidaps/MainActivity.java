@@ -39,6 +39,7 @@ import info.nightscout.androidaps.events.EventAppExit;
 import info.nightscout.androidaps.events.EventPreferenceChange;
 import info.nightscout.androidaps.events.EventRefreshGui;
 import info.nightscout.androidaps.interfaces.PluginBase;
+import info.nightscout.androidaps.realmDb.RealmDBHelper;
 import info.nightscout.androidaps.tabs.SlidingTabLayout;
 import info.nightscout.androidaps.tabs.TabPageAdapter;
 import info.nightscout.utils.ImportExportPrefs;
@@ -49,6 +50,8 @@ import info.nightscout.utils.PasswordProtection;
 import info.nightscout.utils.SP;
 import info.nightscout.utils.ToastUtils;
 import io.realm.Realm;
+import io.realm.RealmConfiguration;
+import io.realm.exceptions.RealmMigrationNeededException;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
     private static Logger log = LoggerFactory.getLogger(MainActivity.class);
@@ -80,6 +83,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             log.debug("onCreate");
 
         Realm.init(this);
+        Realm realm;
+        try {
+            realm = Realm.getDefaultInstance();
+        } catch (RealmMigrationNeededException e) {
+            // Get a Realm instance for this thread
+            RealmConfiguration config = new RealmConfiguration.Builder()
+                    .deleteRealmIfMigrationNeeded()
+                    .build();
+            realm = Realm.getInstance(config);
+        }
         registerBus();
         setUpTabs(false);
     }

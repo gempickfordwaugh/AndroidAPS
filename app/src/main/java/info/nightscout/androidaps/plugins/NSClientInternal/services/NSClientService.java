@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
 import java.net.URISyntaxException;
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.List;
 
 import info.nightscout.androidaps.Config;
 import info.nightscout.androidaps.MainApp;
@@ -46,7 +47,6 @@ import info.nightscout.androidaps.plugins.NSClientInternal.broadcasts.BroadcastP
 import info.nightscout.androidaps.plugins.NSClientInternal.broadcasts.BroadcastSgvs;
 import info.nightscout.androidaps.plugins.NSClientInternal.broadcasts.BroadcastStatus;
 import info.nightscout.androidaps.plugins.NSClientInternal.broadcasts.BroadcastTreatment;
-import info.nightscout.androidaps.db.DbRequest;
 import info.nightscout.androidaps.plugins.NSClientInternal.data.NSCal;
 import info.nightscout.androidaps.plugins.NSClientInternal.data.NSProfile;
 import info.nightscout.androidaps.plugins.NSClientInternal.data.NSSgv;
@@ -58,8 +58,11 @@ import info.nightscout.androidaps.plugins.NSClientInternal.events.EventNSClientS
 import info.nightscout.androidaps.plugins.Overview.Notification;
 import info.nightscout.androidaps.plugins.Overview.events.EventDismissNotification;
 import info.nightscout.androidaps.plugins.Overview.events.EventNewNotification;
+import info.nightscout.androidaps.realmDb.DatabaseRequest;
+import info.nightscout.androidaps.realmDb.RealmDBHelper;
 import info.nightscout.utils.DateUtil;
 import info.nightscout.utils.SP;
+import io.realm.Realm;
 import io.socket.client.IO;
 import io.socket.client.Socket;
 import io.socket.emitter.Emitter;
@@ -196,7 +199,7 @@ public class NSClientService extends Service {
             nsAPIhashCode = Hashing.sha1().hashString(nsAPISecret, Charsets.UTF_8).toString();
 
         MainApp.bus().post(new EventNSClientStatus("Initializing"));
-        if (((NSClientInternalPlugin)MainApp.getSpecificPlugin(NSClientInternalPlugin.class)).paused) {
+        if (((NSClientInternalPlugin) MainApp.getSpecificPlugin(NSClientInternalPlugin.class)).paused) {
             MainApp.bus().post(new EventNSClientNewLog("NSCLIENT", "paused"));
             MainApp.bus().post(new EventNSClientStatus("Paused"));
         } else if (!nsEnabled) {
@@ -518,7 +521,7 @@ public class NSClientService extends Service {
         }
     };
 
-    public void dbUpdate(DbRequest dbr, NSUpdateAck ack) {
+    public void dbUpdate(DatabaseRequest dbr, NSUpdateAck ack) {
         try {
             if (!isConnected || !hasWriteAuth) return;
             JSONObject message = new JSONObject();
@@ -532,7 +535,7 @@ public class NSClientService extends Service {
         }
     }
 
-    public void dbUpdateUnset(DbRequest dbr, NSUpdateAck ack) {
+    public void dbUpdateUnset(DatabaseRequest dbr, NSUpdateAck ack) {
         try {
             if (!isConnected || !hasWriteAuth) return;
             JSONObject message = new JSONObject();
@@ -546,7 +549,7 @@ public class NSClientService extends Service {
         }
     }
 
-    public void dbRemove(DbRequest dbr, NSUpdateAck ack) {
+    public void dbRemove(DatabaseRequest dbr, NSUpdateAck ack) {
         try {
             if (!isConnected || !hasWriteAuth) return;
             JSONObject message = new JSONObject();
@@ -569,7 +572,7 @@ public class NSClientService extends Service {
         }
     }
 
-    public void dbAdd(DbRequest dbr, NSAddAck ack) {
+    public void dbAdd(DatabaseRequest dbr, NSAddAck ack) {
         try {
             if (!isConnected || !hasWriteAuth) return;
             JSONObject message = new JSONObject();
@@ -651,31 +654,21 @@ public class NSClientService extends Service {
                 Logger log = LoggerFactory.getLogger(UploadQueue.class);
                 if (mSocket == null || !mSocket.connected()) return;
 
-                CloseableIterator<DbRequest> iterator = null;
-                try {
-                    iterator = MainApp.getDbHelper().getDaoDbRequest().closeableIterator();
-                    try {
-                        while (iterator.hasNext()) {
-                            DbRequest dbr = iterator.next();
-                            if (dbr.action.equals("dbAdd")) {
-                                NSAddAck addAck = new NSAddAck();
-                                dbAdd(dbr, addAck);
-                            } else if (dbr.action.equals("dbRemove")) {
-                                NSUpdateAck removeAck = new NSUpdateAck(dbr.action, dbr._id);
-                                dbRemove(dbr, removeAck);
-                            } else if (dbr.action.equals("dbUpdate")) {
-                                NSUpdateAck updateAck = new NSUpdateAck(dbr.action, dbr._id);
-                                dbUpdate(dbr, updateAck);
-                            } else if (dbr.action.equals("dbUpdateUnset")) {
-                                NSUpdateAck updateUnsetAck = new NSUpdateAck(dbr.action, dbr._id);
-                                dbUpdateUnset(dbr, updateUnsetAck);
-                            }
-                        }
-                    } finally {
-                        iterator.close();
+                List<DatabaseRequest> databaseRequests = RealmDBHelper.getDatabaseRequests();
+                for (DatabaseRequest dbr : databaseRequests) {
+                    if (dbr.action.equals("dbAdd")) {
+                        NSAddAck addAck = new NSAddAck();
+                        dbAdd(dbr, addAck);
+                    } else if (dbr.action.equals("dbRemove")) {
+                        NSUpdateAck removeAck = new NSUpdateAck(dbr.action, dbr._id);
+                        dbRemove(dbr, removeAck);
+                    } else if (dbr.action.equals("dbUpdate")) {
+                        NSUpdateAck updateAck = new NSUpdateAck(dbr.action, dbr._id);
+                        dbUpdate(dbr, updateAck);
+                    } else if (dbr.action.equals("dbUpdateUnset")) {
+                        NSUpdateAck updateUnsetAck = new NSUpdateAck(dbr.action, dbr._id);
+                        dbUpdateUnset(dbr, updateUnsetAck);
                     }
-                } catch (SQLException e) {
-                    e.printStackTrace();
                 }
 
                 MainApp.bus().post(new EventNSClientNewLog("QUEUE", "Resend ended: " + reason));

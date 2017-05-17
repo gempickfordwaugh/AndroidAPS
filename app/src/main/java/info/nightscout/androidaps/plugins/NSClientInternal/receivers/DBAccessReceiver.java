@@ -18,7 +18,7 @@ import info.nightscout.androidaps.R;
 import info.nightscout.androidaps.interfaces.PluginBase;
 import info.nightscout.androidaps.plugins.NSClientInternal.NSClientInternalPlugin;
 import info.nightscout.androidaps.plugins.NSClientInternal.UploadQueue;
-import info.nightscout.androidaps.db.DbRequest;
+import info.nightscout.androidaps.realmDb.DatabaseRequest;
 import info.nightscout.utils.SP;
 
 public class DBAccessReceiver extends BroadcastReceiver {
@@ -74,10 +74,10 @@ public class DBAccessReceiver extends BroadcastReceiver {
             }
 
             if (action.equals("dbRemove")) {
-                DbRequest dbr = new DbRequest(action, collection, nsclientid.toString(), _id);
+                DatabaseRequest dbr = new DatabaseRequest(action, collection, nsclientid.toString(), _id);
                 UploadQueue.add(dbr);
             } else {
-                DbRequest dbr = new DbRequest(action, collection, nsclientid.toString(), data);
+                DatabaseRequest dbr = new DatabaseRequest(action, collection, nsclientid.toString(), data);
                 UploadQueue.add(dbr);
             }
 

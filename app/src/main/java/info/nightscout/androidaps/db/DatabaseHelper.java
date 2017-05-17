@@ -40,7 +40,6 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
     public static final String DATABASE_TEMPTARGETS = "TempTargets";
     public static final String DATABASE_TREATMENTS = "Treatments";
     public static final String DATABASE_DANARHISTORY = "DanaRHistory";
-    public static final String DATABASE_DBREQUESTS = "DBRequests";
 
     private static final int DATABASE_VERSION = 6;
 
@@ -64,7 +63,6 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
             TableUtils.createTableIfNotExists(connectionSource, Treatment.class);
             TableUtils.createTableIfNotExists(connectionSource, BgReading.class);
             TableUtils.createTableIfNotExists(connectionSource, DanaRHistoryRecord.class);
-            TableUtils.createTableIfNotExists(connectionSource, DbRequest.class);
         } catch (SQLException e) {
             log.error("Can't create database", e);
             throw new RuntimeException(e);
@@ -80,7 +78,6 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
             TableUtils.dropTable(connectionSource, Treatment.class, true);
             TableUtils.dropTable(connectionSource, BgReading.class, true);
             TableUtils.dropTable(connectionSource, DanaRHistoryRecord.class, true);
-            TableUtils.dropTable(connectionSource, DbRequest.class, true);
             onCreate(database, connectionSource);
         } catch (SQLException e) {
             log.error("Can't drop databases", e);
@@ -126,7 +123,6 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
             TableUtils.dropTable(connectionSource, Treatment.class, true);
             TableUtils.dropTable(connectionSource, BgReading.class, true);
             TableUtils.dropTable(connectionSource, DanaRHistoryRecord.class, true);
-            //DbRequests can be cleared from NSClient fragment
             TableUtils.createTableIfNotExists(connectionSource, TempBasal.class);
             TableUtils.createTableIfNotExists(connectionSource, TempTarget.class);
             TableUtils.createTableIfNotExists(connectionSource, Treatment.class);
@@ -177,10 +173,6 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
         return getDao(DanaRHistoryRecord.class);
     }
 
-    public Dao<DbRequest, String> getDaoDbRequest() throws SQLException {
-        return getDao(DbRequest.class);
-    }
-
     public long size(String database) {
         return DatabaseUtils.queryNumEntries(getReadableDatabase(), database);
     }
@@ -200,62 +192,6 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
             e.printStackTrace();
         }
         return new ArrayList<BgReading>();
-    }
-
-    // DbRequests handling
-
-    public void create(DbRequest dbr) {
-        try {
-            getDaoDbRequest().create(dbr);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public int delete(DbRequest dbr) {
-        try {
-            return getDaoDbRequest().delete(dbr);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return 0;
-    }
-
-    public int deleteDbRequest(String nsClientId) {
-        try {
-            return getDaoDbRequest().deleteById(nsClientId);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return 0;
-    }
-
-    public int deleteDbRequestbyMongoId(String action, String id) {
-        try {
-            QueryBuilder<DbRequest, String> queryBuilder = getDaoDbRequest().queryBuilder();
-            Where where = queryBuilder.where();
-            where.eq("_id", id).and().eq("action", action);
-            queryBuilder.limit(10L);
-            PreparedQuery<DbRequest> preparedQuery = queryBuilder.prepare();
-            List<DbRequest> dbList = getDaoDbRequest().query(preparedQuery);
-            if (dbList.size() != 1) {
-                log.error("deleteDbRequestbyMongoId query size: " + dbList.size());
-            } else {
-                //log.debug("Treatment findTreatmentById found: " + trList.get(0).log());
-                return delete(dbList.get(0));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return 0;
-    }
-
-    public void deleteAllDbRequests() {
-        try {
-            TableUtils.clearTable(connectionSource, DbRequest.class);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 
     // TREATMENT HANDLING
