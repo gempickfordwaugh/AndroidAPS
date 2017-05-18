@@ -17,7 +17,6 @@ import info.nightscout.androidaps.MainApp;
 import info.nightscout.androidaps.R;
 import info.nightscout.androidaps.data.GlucoseStatus;
 import info.nightscout.androidaps.data.PumpEnactResult;
-import info.nightscout.androidaps.db.BgReading;
 import info.nightscout.androidaps.db.TempTarget;
 import info.nightscout.androidaps.interfaces.APSInterface;
 import info.nightscout.androidaps.interfaces.PluginBase;
@@ -26,6 +25,7 @@ import info.nightscout.androidaps.plugins.Loop.LoopPlugin;
 import info.nightscout.androidaps.plugins.NSClientInternal.data.NSProfile;
 import info.nightscout.androidaps.plugins.TempTargetRange.TempTargetRangePlugin;
 import info.nightscout.androidaps.plugins.TempTargetRange.events.EventTempTargetRangeChange;
+import info.nightscout.androidaps.realmDb.Bg;
 import info.nightscout.utils.BolusWizard;
 import info.nightscout.utils.DateUtil;
 import info.nightscout.utils.DecimalFormatter;
@@ -186,7 +186,7 @@ public class ActionStringHandler {
                 sendError("No profile found!"); return;
             }
 
-            BgReading bgReading = GlucoseStatus.actualBg();
+            Bg bgReading = GlucoseStatus.actualBg();
             if(bgReading==null && useBG){
                 sendError("No recent BG to base calculation on!"); return;
             }

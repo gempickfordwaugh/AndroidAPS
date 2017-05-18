@@ -260,7 +260,7 @@ public class NewNSTreatmentDialog extends DialogFragment implements View.OnClick
         bgUnitsView.setText(units);
 
         // Set BG if not old
-//        BgReading lastBg = MainApp.getDbHelper().lastBg();
+//        Bg lastBg = MainApp.getDbHelper().lastBg();
 //        Double lastBgValue = 0d;
 //        if (lastBg != null) {
 //            lastBgValue = lastBg.valueToUnits(units);

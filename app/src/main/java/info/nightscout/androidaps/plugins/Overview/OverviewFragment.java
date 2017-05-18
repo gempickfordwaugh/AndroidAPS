@@ -65,7 +65,6 @@ import info.nightscout.androidaps.R;
 import info.nightscout.androidaps.data.GlucoseStatus;
 import info.nightscout.androidaps.data.IobTotal;
 import info.nightscout.androidaps.data.PumpEnactResult;
-import info.nightscout.androidaps.db.BgReading;
 import info.nightscout.androidaps.db.TempBasal;
 import info.nightscout.androidaps.db.TempTarget;
 import info.nightscout.androidaps.db.Treatment;
@@ -105,6 +104,8 @@ import info.nightscout.androidaps.plugins.Overview.graphExtensions.TimeAsXAxisLa
 import info.nightscout.androidaps.plugins.SourceXdrip.SourceXdripPlugin;
 import info.nightscout.androidaps.plugins.TempTargetRange.TempTargetRangePlugin;
 import info.nightscout.androidaps.plugins.TempTargetRange.events.EventTempTargetRangeChange;
+import info.nightscout.androidaps.realmDb.Bg;
+import info.nightscout.androidaps.realmDb.RealmDBHelper;
 import info.nightscout.utils.BolusWizard;
 import info.nightscout.utils.DateUtil;
 import info.nightscout.utils.DecimalFormatter;
@@ -546,7 +547,7 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
     }
 
     void onClickQuickwizard() {
-        final BgReading actualBg = GlucoseStatus.actualBg();
+        final Bg actualBg = GlucoseStatus.actualBg();
         if (MainApp.getConfigBuilder() == null || ConfigBuilderPlugin.getActiveProfile() == null) // app not initialized yet
             return;
         final NSProfile profile = ConfigBuilderPlugin.getActiveProfile().getProfile();
@@ -794,8 +795,8 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
     public void updateGUI(String from) {
         log.debug("updateGUI entered from: " + from);
         updateNotifications();
-        BgReading actualBG = GlucoseStatus.actualBg();
-        BgReading lastBG = GlucoseStatus.lastBg();
+        Bg actualBG = GlucoseStatus.actualBg();
+        Bg lastBG = GlucoseStatus.lastBg();
 
         if (MainApp.getConfigBuilder() == null || MainApp.getConfigBuilder().getActiveProfile() == null || MainApp.getConfigBuilder().getActiveProfile().getProfile() == null) {// app not initialized yet
             pumpStatusView.setText(R.string.noprofileset);
@@ -996,7 +997,7 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
                 avgdeltaView.setText("");
             }
 
-            BgReading.units = profile.getUnits();
+            Bg.units = profile.getUnits();
         } else
             return;
 
@@ -1007,7 +1008,7 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
             flag &= ~Paint.STRIKE_THRU_TEXT_FLAG;
         bgView.setPaintFlags(flag);
 
-        Long agoMsec = new Date().getTime() - lastBG.timeIndex;
+        Long agoMsec = new Date().getTime() - lastBG.date;
         int agoMin = (int) (agoMsec / 60d / 1000d);
         timeAgoView.setText(String.format(MainApp.sResources.getString(R.string.minago), agoMin));
 
@@ -1065,10 +1066,10 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
         LineGraphSeries<DataPoint> tempBasalsSeries = null;
         AreaGraphSeries<DoubleDataPoint> areaSeries;
         LineGraphSeries<DataPoint> seriesNow, seriesNow2;
-        PointsGraphSeries<BgReading> seriesInRage;
-        PointsGraphSeries<BgReading> seriesLow;
-        PointsGraphSeries<BgReading> seriesHigh;
-        PointsGraphSeries<BgReading> predSeries;
+        PointsGraphSeries<Bg> seriesInRage;
+        PointsGraphSeries<Bg> seriesLow;
+        PointsGraphSeries<Bg> seriesHigh;
+        PointsGraphSeries<Bg> predSeries;
         PointsWithLabelGraphSeries<Treatment> seriesTreatments;
 
         // **** TEMP BASALS graph ****
@@ -1280,18 +1281,18 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
         iobGraph.getGridLabelRenderer().setNumHorizontalLabels(7); // only 7 because of the space
 
         // **** BG graph ****
-        List<BgReading> bgReadingsArray = MainApp.getDbHelper().getBgreadingsDataFromTime(fromTime, true);
-        List<BgReading> inRangeArray = new ArrayList<>();
-        List<BgReading> lowArray = new ArrayList<>();
-        List<BgReading> highArray = new ArrayList<>();
+        List<Bg> bgReadingsArray = RealmDBHelper.getBgDataFromTime(fromTime, true);
+        List<Bg> inRangeArray = new ArrayList<>();
+        List<Bg> lowArray = new ArrayList<>();
+        List<Bg> highArray = new ArrayList<>();
 
         if (bgReadingsArray.size() == 0)
             return;
 
-        Iterator<BgReading> it = bgReadingsArray.iterator();
+        Iterator<Bg> it = bgReadingsArray.iterator();
         Double maxBgValue = 0d;
         while (it.hasNext()) {
-            BgReading bg = it.next();
+            Bg bg = it.next();
             if (bg.value > maxBgValue) maxBgValue = bg.value;
             if (bg.valueToUnits(units) < lowLine)
                 lowArray.add(bg);
@@ -1305,9 +1306,9 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
         if (highLine > maxBgValue) maxBgValue = highLine;
         Integer numOfHorizLines = units.equals(Constants.MGDL) ? (int) (maxBgValue / 40 + 1) : (int) (maxBgValue / 2 + 1);
 
-        BgReading[] inRange = new BgReading[inRangeArray.size()];
-        BgReading[] low = new BgReading[lowArray.size()];
-        BgReading[] high = new BgReading[highArray.size()];
+        Bg[] inRange = new Bg[inRangeArray.size()];
+        Bg[] low = new Bg[lowArray.size()];
+        Bg[] high = new Bg[highArray.size()];
         inRange = inRangeArray.toArray(inRange);
         low = lowArray.toArray(low);
         high = highArray.toArray(high);
@@ -1336,11 +1337,11 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
 
         if (showPrediction) {
             DetermineBasalResultAMA amaResult = (DetermineBasalResultAMA) finalLastRun.constraintsProcessed;
-            List<BgReading> predArray = amaResult.getPredictions();
-            BgReading[] pred = new BgReading[predArray.size()];
+            List<Bg> predArray = amaResult.getPredictions();
+            Bg[] pred = new Bg[predArray.size()];
             pred = predArray.toArray(pred);
             if (pred.length > 0) {
-                bgGraph.addSeries(predSeries = new PointsGraphSeries<BgReading>(pred));
+                bgGraph.addSeries(predSeries = new PointsGraphSeries<Bg>(pred));
                 predSeries.setShape(PointsGraphSeries.Shape.POINT);
                 predSeries.setSize(4);
                 predSeries.setColor(MainApp.sResources.getColor(R.color.prediction));

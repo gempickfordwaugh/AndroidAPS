@@ -20,7 +20,8 @@ import java.util.List;
 
 import info.nightscout.androidaps.MainApp;
 import info.nightscout.androidaps.R;
-import info.nightscout.androidaps.db.BgReading;
+import info.nightscout.androidaps.realmDb.Bg;
+import info.nightscout.androidaps.realmDb.RealmDBHelper;
 import info.nightscout.utils.DecimalFormatter;
 import info.nightscout.utils.Round;
 
@@ -70,15 +71,15 @@ public class GlucoseStatus {
 
         // load 45min
         long fromtime = (long) (new Date().getTime() - 60 * 1000L * 45);
-        List<BgReading> data = MainApp.getDbHelper().getBgreadingsDataFromTime(fromtime, false);
+        List<Bg> data = RealmDBHelper.getBgDataFromTime(fromtime, false);
 
         int sizeRecords = data.size();
-        if (sizeRecords < 1 || data.get(0).timeIndex < new Date().getTime() - 7 * 60 * 1000L) {
+        if (sizeRecords < 1 || data.get(0).date < new Date().getTime() - 7 * 60 * 1000L) {
             return null;
         }
 
-        BgReading now = data.get(0);
-        long now_date = now.timeIndex;
+        Bg now = data.get(0);
+        long now_date = now.date;
         double change;
 
         if (sizeRecords < 2) {
@@ -97,8 +98,8 @@ public class GlucoseStatus {
 
         for (int i = 1; i < data.size(); i++) {
             if (data.get(i).value > 38) {
-                BgReading then = data.get(i);
-                long then_date = then.timeIndex;
+                Bg then = data.get(i);
+                long then_date = then.date;
                 double avgdelta = 0;
                 long minutesago;
 
@@ -144,28 +145,11 @@ public class GlucoseStatus {
     }
 
     /*
-     * Return last BgReading from database or null if db is empty
+     * Return last Bg from database or null if db is empty
      */
     @Nullable
-    public static BgReading lastBg() {
-        List<BgReading> bgList = null;
-
-        try {
-            Dao<BgReading, Long> daoBgReadings = MainApp.getDbHelper().getDaoBgReadings();
-            QueryBuilder<BgReading, Long> queryBuilder = daoBgReadings.queryBuilder();
-            queryBuilder.orderBy("timeIndex", false);
-            queryBuilder.limit(1L);
-            queryBuilder.where().gt("value", 38);
-            PreparedQuery<BgReading> preparedQuery = queryBuilder.prepare();
-            bgList = daoBgReadings.query(preparedQuery);
-
-        } catch (SQLException e) {
-            log.debug(e.getMessage(), e);
-        }
-        if (bgList != null && bgList.size() > 0)
-            return bgList.get(0);
-        else
-            return null;
+    public static Bg lastBg() {
+        return RealmDBHelper.getLastBg();
     }
 
     /*
@@ -173,13 +157,13 @@ public class GlucoseStatus {
      * or null if older
      */
     @Nullable
-    public static BgReading actualBg() {
-        BgReading lastBg = lastBg();
+    public static Bg actualBg() {
+        Bg lastBg = lastBg();
 
         if (lastBg == null)
             return null;
 
-        if (lastBg.timeIndex > new Date().getTime() - 9 * 60 * 1000)
+        if (lastBg.date > new Date().getTime() - 9 * 60 * 1000)
             return lastBg;
 
         return null;

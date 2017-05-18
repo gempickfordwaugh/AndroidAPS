@@ -1,5 +1,8 @@
 package info.nightscout.androidaps.realmDb;
 
+import android.support.annotation.Nullable;
+
+import java.util.ArrayList;
 import java.util.List;
 
 import io.realm.Realm;
@@ -29,14 +32,35 @@ public class RealmDBHelper {
     // ----------- Bg ------------
 
     static public List<Bg> getBgDataFromTime(long mills, boolean ascending) {
+        try {
+            Realm realm = Realm.getDefaultInstance();
+            return realm.where(Bg.class).greaterThanOrEqualTo("date", mills).findAllSorted("date", ascending ? Sort.ASCENDING : Sort.DESCENDING);
+        } catch (IllegalStateException e) {
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    @Nullable
+    static public Bg getLastBg() {
         Realm realm = Realm.getDefaultInstance();
-        return realm.where(Bg.class).greaterThanOrEqualTo("date", mills).findAllSorted("date", ascending ? Sort.ASCENDING : Sort.DESCENDING);
+        RealmResults<Bg>  realmResults = realm.where(Bg.class).findAllSorted("date");
+        if (realmResults.size() > 0)
+            return realmResults.last();
+        return null;
     }
 
     static public void add(Bg bg) {
         Realm realm = Realm.getDefaultInstance();
         realm.beginTransaction();
         realm.copyToRealm(bg);
+        realm.commitTransaction();
+    }
+
+    static public void addOrUpdate(Bg bg) {
+        Realm realm = Realm.getDefaultInstance();
+        realm.beginTransaction();
+        realm.copyToRealmOrUpdate(bg);
         realm.commitTransaction();
     }
 

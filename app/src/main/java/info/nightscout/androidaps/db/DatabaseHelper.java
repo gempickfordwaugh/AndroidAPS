@@ -61,7 +61,6 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
             TableUtils.createTableIfNotExists(connectionSource, TempBasal.class);
             TableUtils.createTableIfNotExists(connectionSource, TempTarget.class);
             TableUtils.createTableIfNotExists(connectionSource, Treatment.class);
-            TableUtils.createTableIfNotExists(connectionSource, BgReading.class);
             TableUtils.createTableIfNotExists(connectionSource, DanaRHistoryRecord.class);
         } catch (SQLException e) {
             log.error("Can't create database", e);
@@ -76,7 +75,6 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
             TableUtils.dropTable(connectionSource, TempBasal.class, true);
             TableUtils.dropTable(connectionSource, TempTarget.class, true);
             TableUtils.dropTable(connectionSource, Treatment.class, true);
-            TableUtils.dropTable(connectionSource, BgReading.class, true);
             TableUtils.dropTable(connectionSource, DanaRHistoryRecord.class, true);
             onCreate(database, connectionSource);
         } catch (SQLException e) {
@@ -121,12 +119,10 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
             TableUtils.dropTable(connectionSource, TempBasal.class, true);
             TableUtils.dropTable(connectionSource, TempTarget.class, true);
             TableUtils.dropTable(connectionSource, Treatment.class, true);
-            TableUtils.dropTable(connectionSource, BgReading.class, true);
             TableUtils.dropTable(connectionSource, DanaRHistoryRecord.class, true);
             TableUtils.createTableIfNotExists(connectionSource, TempBasal.class);
             TableUtils.createTableIfNotExists(connectionSource, TempTarget.class);
             TableUtils.createTableIfNotExists(connectionSource, Treatment.class);
-            TableUtils.createTableIfNotExists(connectionSource, BgReading.class);
             TableUtils.createTableIfNotExists(connectionSource, DanaRHistoryRecord.class);
             latestTreatmentChange = 0L;
         } catch (SQLException e) {
@@ -165,33 +161,12 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
         return getDao(Treatment.class);
     }
 
-    public Dao<BgReading, Long> getDaoBgReadings() throws SQLException {
-        return getDao(BgReading.class);
-    }
-
     public Dao<DanaRHistoryRecord, String> getDaoDanaRHistory() throws SQLException {
         return getDao(DanaRHistoryRecord.class);
     }
 
     public long size(String database) {
         return DatabaseUtils.queryNumEntries(getReadableDatabase(), database);
-    }
-
-    public List<BgReading> getBgreadingsDataFromTime(long mills, boolean ascending) {
-        try {
-            Dao<BgReading, Long> daoBgreadings = getDaoBgReadings();
-            List<BgReading> bgReadings;
-            QueryBuilder<BgReading, Long> queryBuilder = daoBgreadings.queryBuilder();
-            queryBuilder.orderBy("timeIndex", ascending);
-            Where where = queryBuilder.where();
-            where.ge("timeIndex", mills).and().gt("value", 38);
-            PreparedQuery<BgReading> preparedQuery = queryBuilder.prepare();
-            bgReadings = daoBgreadings.query(preparedQuery);
-            return bgReadings;
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return new ArrayList<BgReading>();
     }
 
     // TREATMENT HANDLING

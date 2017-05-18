@@ -26,7 +26,6 @@ import info.nightscout.androidaps.Config;
 import info.nightscout.androidaps.Constants;
 import info.nightscout.androidaps.MainApp;
 import info.nightscout.androidaps.R;
-import info.nightscout.androidaps.db.BgReading;
 import info.nightscout.androidaps.db.DanaRHistoryRecord;
 import info.nightscout.androidaps.db.TempTarget;
 import info.nightscout.androidaps.db.Treatment;
@@ -51,6 +50,8 @@ import info.nightscout.androidaps.plugins.SourceMM640g.SourceMM640gPlugin;
 import info.nightscout.androidaps.plugins.SourceNSClient.SourceNSClientPlugin;
 import info.nightscout.androidaps.plugins.SourceXdrip.SourceXdripPlugin;
 import info.nightscout.androidaps.plugins.TempTargetRange.events.EventTempTargetRangeChange;
+import info.nightscout.androidaps.realmDb.Bg;
+import info.nightscout.androidaps.realmDb.RealmDBHelper;
 import info.nightscout.androidaps.receivers.DataReceiver;
 import info.nightscout.androidaps.plugins.NSClientInternal.data.NSProfile;
 import info.nightscout.androidaps.plugins.NSClientInternal.data.NSSgv;
@@ -176,15 +177,14 @@ public class DataService extends IntentService {
         Bundle bundle = intent.getExtras();
         if (bundle == null) return;
 
-        BgReading bgReading = new BgReading();
+        Bg bgReading = new Bg();
 
         bgReading.value = bundle.getDouble(Intents.EXTRA_BG_ESTIMATE);
         bgReading.direction = bundle.getString(Intents.EXTRA_BG_SLOPE_NAME);
-        bgReading.battery_level = bundle.getInt(Intents.EXTRA_SENSOR_BATTERY);
-        bgReading.timeIndex = bundle.getLong(Intents.EXTRA_TIMESTAMP);
+        bgReading.date = bundle.getLong(Intents.EXTRA_TIMESTAMP);
         bgReading.raw = bundle.getDouble(Intents.EXTRA_RAW);
 
-        if (bgReading.timeIndex < new Date().getTime() - Constants.hoursToKeepInDatabase * 60 * 60 * 1000L) {
+        if (bgReading.date < new Date().getTime() - Constants.hoursToKeepInDatabase * 60 * 60 * 1000L) {
             if (Config.logIncommingBG)
                 log.debug("Ignoring old XDRIPREC BG " + bgReading.toString());
             return;
@@ -193,11 +193,7 @@ public class DataService extends IntentService {
         if (Config.logIncommingBG)
             log.debug("XDRIPREC BG " + bgReading.toString());
 
-        try {
-            MainApp.getDbHelper().getDaoBgReadings().createIfNotExists(bgReading);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        RealmDBHelper.addOrUpdate(bgReading);
         MainApp.bus().post(new EventNewBG());
     }
 
@@ -205,23 +201,18 @@ public class DataService extends IntentService {
         Bundle bundle = intent.getExtras();
         if (bundle == null) return;
 
-        BgReading bgReading = new BgReading();
+        Bg bgReading = new Bg();
 
         bgReading.value = bundle.getDouble("mySGV");
         bgReading.direction = bundle.getString("myTrend");
-        bgReading.battery_level = bundle.getInt("myBatLvl");
-        bgReading.timeIndex = bundle.getLong("myTimestamp");
+        bgReading.date = bundle.getLong("myTimestamp");
         bgReading.raw = 0;
 
         if (Config.logIncommingBG)
             log.debug(bundle.toString());
             log.debug("GLIMP BG " + bgReading.toString());
 
-        try {
-            MainApp.getDbHelper().getDaoBgReadings().createIfNotExists(bgReading);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        RealmDBHelper.addOrUpdate(bgReading);
         MainApp.bus().post(new EventNewBG());
     }
 
@@ -243,14 +234,14 @@ public class DataService extends IntentService {
                         final String type = json_object.getString("type");
                         switch (type) {
                             case "sgv":
-                                BgReading bgReading = new BgReading();
+                                Bg bgReading = new Bg();
 
                                 bgReading.value = json_object.getDouble("sgv");
                                 bgReading.direction = json_object.getString("direction");
-                                bgReading.timeIndex = json_object.getLong("date");
+                                bgReading.date = json_object.getLong("date");
                                 bgReading.raw = json_object.getDouble("sgv");
 
-                                if (bgReading.timeIndex < new Date().getTime() - Constants.hoursToKeepInDatabase * 60 * 60 * 1000L) {
+                                if (bgReading.date < new Date().getTime() - Constants.hoursToKeepInDatabase * 60 * 60 * 1000L) {
                                     if (Config.logIncommingBG)
                                         log.debug("Ignoring old MM640g BG " + bgReading.toString());
                                     return;
@@ -259,11 +250,7 @@ public class DataService extends IntentService {
                                 if (Config.logIncommingBG)
                                     log.debug("MM640g BG " + bgReading.toString());
 
-                                try {
-                                    MainApp.getDbHelper().getDaoBgReadings().createIfNotExists(bgReading);
-                                } catch (SQLException e) {
-                                    e.printStackTrace();
-                                }
+                                RealmDBHelper.addOrUpdate(bgReading);
                                 break;
                             default:
                                 log.debug("Unknown entries type: " + type);
@@ -450,13 +437,13 @@ public class DataService extends IntentService {
                     String sgvstring = bundles.getString("sgv");
                     JSONObject sgvJson = new JSONObject(sgvstring);
                     NSSgv nsSgv = new NSSgv(sgvJson);
-                    BgReading bgReading = new BgReading(nsSgv);
-                    if (bgReading.timeIndex < new Date().getTime() - Constants.hoursToKeepInDatabase * 60 * 60 * 1000l) {
+                    Bg bgReading = new Bg(nsSgv);
+                    if (bgReading.date < new Date().getTime() - Constants.hoursToKeepInDatabase * 60 * 60 * 1000l) {
                         if (Config.logIncommingData)
                             log.debug("Ignoring old BG: " + bgReading.toString());
                         return;
                     }
-                    MainApp.getDbHelper().getDaoBgReadings().createIfNotExists(bgReading);
+                    RealmDBHelper.addOrUpdate(bgReading);
                     if (Config.logIncommingData)
                         log.debug("ADD: Stored new BG: " + bgReading.toString());
                 }
@@ -467,12 +454,12 @@ public class DataService extends IntentService {
                     for (int i = 0; i < jsonArray.length(); i++) {
                         JSONObject sgvJson = jsonArray.getJSONObject(i);
                         NSSgv nsSgv = new NSSgv(sgvJson);
-                        BgReading bgReading = new BgReading(nsSgv);
-                        if (bgReading.timeIndex < new Date().getTime() - Constants.hoursToKeepInDatabase * 60 * 60 * 1000l) {
+                        Bg bgReading = new Bg(nsSgv);
+                        if (bgReading.date < new Date().getTime() - Constants.hoursToKeepInDatabase * 60 * 60 * 1000l) {
                             if (Config.logIncommingData)
                                 log.debug("Ignoring old BG: " + bgReading.toString());
                         } else {
-                            MainApp.getDbHelper().getDaoBgReadings().createIfNotExists(bgReading);
+                            RealmDBHelper.addOrUpdate(bgReading);
                             if (Config.logIncommingData)
                                 log.debug("ADD: Stored new BG: " + bgReading.toString());
                         }

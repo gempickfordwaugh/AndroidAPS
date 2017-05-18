@@ -19,6 +19,7 @@ import info.nightscout.androidaps.interfaces.InsulinInterface;
 import info.nightscout.androidaps.plugins.ConfigBuilder.ConfigBuilderPlugin;
 import info.nightscout.androidaps.plugins.Overview.graphExtensions.DataPointWithLabelInterface;
 import info.nightscout.androidaps.plugins.NSClientInternal.data.NSProfile;
+import info.nightscout.androidaps.realmDb.Bg;
 import info.nightscout.utils.DateUtil;
 import info.nightscout.utils.DecimalFormatter;
 
@@ -120,12 +121,12 @@ public class Treatment implements DataPointWithLabelInterface {
         return label;
     }
 
-    public void setYValue(List<BgReading> bgReadingsArray) {
+    public void setYValue(List<Bg> bgReadingsArray) {
         NSProfile profile = MainApp.getConfigBuilder().getActiveProfile().getProfile();
         if (profile == null) return;
         for (int r = bgReadingsArray.size() - 1; r >= 0; r--) {
-            BgReading reading = bgReadingsArray.get(r);
-            if (reading.timeIndex > timeIndex) continue;
+            Bg reading = bgReadingsArray.get(r);
+            if (reading.date > timeIndex) continue;
             yValue = NSProfile.fromMgdlToUnits(reading.value, profile.getUnits());
             break;
         }

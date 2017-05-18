@@ -27,17 +27,18 @@ import info.nightscout.androidaps.Constants;
 import info.nightscout.androidaps.MainApp;
 import info.nightscout.androidaps.R;
 import info.nightscout.androidaps.data.GlucoseStatus;
-import info.nightscout.androidaps.db.BgReading;
+import info.nightscout.androidaps.data.IobTotal;
 import info.nightscout.androidaps.db.TempBasal;
 import info.nightscout.androidaps.interfaces.PluginBase;
 import info.nightscout.androidaps.interfaces.PumpInterface;
-import info.nightscout.androidaps.data.IobTotal;
 import info.nightscout.androidaps.interfaces.TreatmentsInterface;
 import info.nightscout.androidaps.plugins.Loop.LoopPlugin;
+import info.nightscout.androidaps.plugins.NSClientInternal.data.NSProfile;
 import info.nightscout.androidaps.plugins.Overview.OverviewPlugin;
 import info.nightscout.androidaps.plugins.Wear.ActionStringHandler;
 import info.nightscout.androidaps.plugins.Wear.WearPlugin;
-import info.nightscout.androidaps.plugins.NSClientInternal.data.NSProfile;
+import info.nightscout.androidaps.realmDb.Bg;
+import info.nightscout.androidaps.realmDb.RealmDBHelper;
 import info.nightscout.utils.DecimalFormatter;
 import info.nightscout.utils.SafeParse;
 import info.nightscout.utils.ToastUtils;
@@ -187,7 +188,7 @@ public class WatchUpdaterService extends WearableListenerService implements
 
     private void sendData() {
 
-        BgReading lastBG = GlucoseStatus.lastBg();
+        Bg lastBG = GlucoseStatus.lastBg();
         if (lastBG != null) {
             GlucoseStatus glucoseStatus = GlucoseStatus.getGlucoseStatusData();
 
@@ -205,7 +206,7 @@ public class WatchUpdaterService extends WearableListenerService implements
         }
     }
 
-    private DataMap dataMapSingleBG(BgReading lastBG, GlucoseStatus glucoseStatus) {
+    private DataMap dataMapSingleBG(Bg lastBG, GlucoseStatus glucoseStatus) {
         NSProfile profile = MainApp.getConfigBuilder().getActiveProfile().getProfile();
         if(profile == null) return null;
 
@@ -237,7 +238,7 @@ public class WatchUpdaterService extends WearableListenerService implements
 
         int battery = getBatteryLevel(getApplicationContext());
         dataMap.putString("sgvString", lastBG.valueToUnitsToString(profile.getUnits()));
-        dataMap.putDouble("timestamp", lastBG.getTimeIndex());
+        dataMap.putDouble("timestamp", lastBG.date);
         if(glucoseStatus == null) {
             dataMap.putString("slopeArrow", "" );
             dataMap.putString("delta", "");
@@ -295,11 +296,11 @@ public class WatchUpdaterService extends WearableListenerService implements
     private void resendData() {
         if(googleApiClient != null && !googleApiClient.isConnected() && !googleApiClient.isConnecting()) { googleApiConnect(); }
         long startTime = System.currentTimeMillis() - (long)(60000 * 60 * 5.5);
-        BgReading last_bg = GlucoseStatus.lastBg();
+        Bg last_bg = GlucoseStatus.lastBg();
 
         if (last_bg == null) return;
 
-        List<BgReading> graph_bgs =  MainApp.getDbHelper().getBgreadingsDataFromTime(startTime, true);
+        List<Bg> graph_bgs =  RealmDBHelper.getBgDataFromTime(startTime, true);
         GlucoseStatus glucoseStatus = GlucoseStatus.getGlucoseStatusData();
 
         if (!graph_bgs.isEmpty()) {
@@ -309,7 +310,7 @@ public class WatchUpdaterService extends WearableListenerService implements
                 return;
             }
             final ArrayList<DataMap> dataMaps = new ArrayList<>(graph_bgs.size());
-            for (BgReading bg : graph_bgs) {
+            for (Bg bg : graph_bgs) {
                 DataMap dataMap = dataMapSingleBG(bg, glucoseStatus);
                 if(dataMap != null) {
                     dataMaps.add(dataMap);

@@ -13,9 +13,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import info.nightscout.androidaps.db.BgReading;
 import info.nightscout.androidaps.plugins.Loop.APSResult;
 import info.nightscout.androidaps.data.IobTotal;
+import info.nightscout.androidaps.realmDb.Bg;
 
 public class DetermineBasalResultAMA extends APSResult {
     public Date date;
@@ -91,8 +91,8 @@ public class DetermineBasalResultAMA extends APSResult {
         return null;
     }
 
-    public List<BgReading> getPredictions() {
-        List<BgReading> array = new ArrayList<>();
+    public List<Bg> getPredictions() {
+        List<Bg> array = new ArrayList<>();
         try {
             long startTime = date.getTime();
             if (json.has("predBGs")) {
@@ -100,27 +100,27 @@ public class DetermineBasalResultAMA extends APSResult {
                 if (predBGs.has("IOB")) {
                     JSONArray iob = predBGs.getJSONArray("IOB");
                     for (int i = 1; i < iob.length(); i ++) {
-                        BgReading bg = new BgReading();
+                        Bg bg = new Bg();
                         bg.value = iob.getInt(i);
-                        bg.timeIndex = startTime + i * 5 * 60 * 1000L;
+                        bg.date = startTime + i * 5 * 60 * 1000L;
                         array.add(bg);
                     }
                 }
                 if (predBGs.has("aCOB")) {
                     JSONArray iob = predBGs.getJSONArray("aCOB");
                     for (int i = 1; i < iob.length(); i ++) {
-                        BgReading bg = new BgReading();
+                        Bg bg = new Bg();
                         bg.value = iob.getInt(i);
-                        bg.timeIndex = startTime + i * 5 * 60 * 1000L;
+                        bg.date = startTime + i * 5 * 60 * 1000L;
                         array.add(bg);
                     }
                 }
                 if (predBGs.has("COB")) {
                     JSONArray iob = predBGs.getJSONArray("COB");
                     for (int i = 1; i < iob.length(); i ++) {
-                        BgReading bg = new BgReading();
+                        Bg bg = new Bg();
                         bg.value = iob.getInt(i);
-                        bg.timeIndex = startTime + i * 5 * 60 * 1000L;
+                        bg.date = startTime + i * 5 * 60 * 1000L;
                         array.add(bg);
                     }
                 }

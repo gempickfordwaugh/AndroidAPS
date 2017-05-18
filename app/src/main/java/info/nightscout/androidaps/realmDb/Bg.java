@@ -91,7 +91,7 @@ public class Bg extends RealmObject implements DataPointInterface {
 
     @Override
     public String toString() {
-        return "BgReading{" +
+        return "Bgng{" +
                 "date=" + date +
                 "date=" + DateUtil.dateAndTimeString(date) +
                 ", isValid=" + isValid +

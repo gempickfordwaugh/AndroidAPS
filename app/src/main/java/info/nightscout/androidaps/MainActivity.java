@@ -66,6 +66,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Realm.init(this);
         super.onCreate(savedInstanceState);
         Iconify.with(new FontAwesomeModule());
         LocaleHelper.onCreate(this, "en");
@@ -82,7 +83,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (Config.logFunctionCalls)
             log.debug("onCreate");
 
-        Realm.init(this);
         Realm realm;
         try {
             realm = Realm.getDefaultInstance();

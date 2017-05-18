@@ -8,7 +8,6 @@ import java.util.List;
 import info.nightscout.androidaps.Constants;
 import info.nightscout.androidaps.MainApp;
 import info.nightscout.androidaps.data.Iob;
-import info.nightscout.androidaps.db.BgReading;
 import info.nightscout.androidaps.interfaces.InsulinInterface;
 import info.nightscout.androidaps.plugins.ConfigBuilder.ConfigBuilderPlugin;
 import info.nightscout.androidaps.plugins.NSClientInternal.data.NSProfile;
@@ -88,12 +87,12 @@ public class Bolus extends RealmObject implements DataPointWithLabelInterface {
         return label;
     }
 
-    public void setYValue(List<BgReading> bgReadingsArray) {
+    public void setYValue(List<Bg> bgReadingsArray) {
         NSProfile profile = MainApp.getConfigBuilder().getActiveProfile().getProfile();
         if (profile == null) return;
         for (int r = bgReadingsArray.size() - 1; r >= 0; r--) {
-            BgReading reading = bgReadingsArray.get(r);
-            if (reading.timeIndex > date) continue;
+            Bg reading = bgReadingsArray.get(r);
+            if (reading.date > date) continue;
             yValue = NSProfile.fromMgdlToUnits(reading.value, profile.getUnits());
             break;
         }
