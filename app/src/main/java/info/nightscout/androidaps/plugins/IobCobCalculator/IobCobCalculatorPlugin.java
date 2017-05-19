@@ -18,6 +18,7 @@ import java.util.List;
 
 import info.nightscout.androidaps.Constants;
 import info.nightscout.androidaps.MainApp;
+import info.nightscout.androidaps.R;
 import info.nightscout.androidaps.data.IobTotal;
 import info.nightscout.androidaps.db.BgReading;
 import info.nightscout.androidaps.db.Treatment;
@@ -230,6 +231,8 @@ public class IobCobCalculatorPlugin implements PluginBase {
 
     public void calculateSensitivityData() {
         //log.debug("Locking calculateSensitivityData");
+        long oldestTimeWithData = oldestDataAvailable();
+
         synchronized (dataLock) {
             NSProfile profile = ConfigBuilderPlugin.getActiveProfile() != null ? ConfigBuilderPlugin.getActiveProfile().getProfile() : null;
 
@@ -324,6 +327,7 @@ public class IobCobCalculatorPlugin implements PluginBase {
 
                 previous = autosensData;
                 autosensDataTable.put(bgTime, autosensData);
+                autosensData.autosensRatio = detectSensitivity(oldestTimeWithData).ratio;
                 log.debug(autosensData.log(bgTime));
             }
         }
@@ -409,154 +413,129 @@ public class IobCobCalculatorPlugin implements PluginBase {
         return array;
     }
 
+    public static long oldestDataAvailable() {
+        long now = new Date().getTime();
+        if (MainApp.getConfigBuilder().getActiveProfile() == null)
+            return now;
+
+        NSProfile profile = MainApp.getConfigBuilder().getActiveProfile().getProfile();
+
+        if (profile == null)
+            return now;
+
+        long oldestDataAvailable = MainApp.getConfigBuilder().getActiveTempBasals().oldestDataAvaialable();
+        long getBGDataFrom = Math.max(oldestDataAvailable, (long) (new Date().getTime() - 60 * 60 * 1000L * (24 + profile.getDia())));
+        log.debug("Limiting data to oldest available temps: " + new Date(oldestDataAvailable).toString());
+        return getBGDataFrom;
+    }
+
+    public static AutosensResult detectSensitivityWithLock(long fromTime) {
+        synchronized (dataLock) {
+            return detectSensitivity(fromTime);
+        }
+    }
+
     public static AutosensResult detectSensitivity(long fromTime) {
         //log.debug("Locking detectSensitivity");
-        synchronized (dataLock) {
-            if (autosensDataTable == null || autosensDataTable.size() < 4) {
-                log.debug("No autosens data available");
-                return new AutosensResult();
-            }
+        String age = SP.getString(R.string.key_age, "");
+        int defaultHours = 24;
+        if (age.equals(MainApp.sResources.getString(R.string.key_adult))) defaultHours = 24;
+        if (age.equals(MainApp.sResources.getString(R.string.key_teenage))) defaultHours = 4;
+        if (age.equals(MainApp.sResources.getString(R.string.key_child))) defaultHours = 4;
 
-            AutosensData current = getLastAutosensData();
-            if (current == null) {
-                log.debug("No current autosens data available");
-                return new AutosensResult();
-            }
+        int hoursForDetection = SP.getInt(R.string.key_openapsama_autosens_period, defaultHours);
 
-
-            if (ConfigBuilderPlugin.getActiveProfile() == null || ConfigBuilderPlugin.getActiveProfile().getProfile() == null) {
-                log.debug("No profile available");
-                return new AutosensResult();
-            }
-
-            NSProfile profile = ConfigBuilderPlugin.getActiveProfile().getProfile();
-
-            Double sens = profile.getIsf(NSProfile.secondsFromMidnight());
-
-            if (sens == null || profile.getMaxDailyBasal() == 0) {
-                log.debug("No profile available");
-                return new AutosensResult();
-            }
-
-            List<Double> deviationsArray24h = new ArrayList<>();
-            List<Double> deviationsArray4h = new ArrayList<>();
-            List<Double> deviationsArrayLastValid1h = new ArrayList<>();
-            List<Double> deviationsArrayLastValid4h = new ArrayList<>();
-            String pastSensitivity = "";
-            int index = 0;
-            long now = new Date().getTime();
-
-            while (index < autosensDataTable.size()) {
-                AutosensData autosensData = autosensDataTable.valueAt(index);
-
-                if (autosensData.time < fromTime) {
-                    index++;
-                    continue;
-                }
-
-                if (autosensData.nonCarbsDeviation) {
-                    if (autosensData.time > now - 24 * 60 * 60 * 1000L)
-                        deviationsArray24h.add(autosensData.deviation);
-                    if (autosensData.time > now - 4 * 60 * 60 * 1000L)
-                        deviationsArray4h.add(autosensData.deviation);
-                }
-                if (autosensData.nonCarbsDeviation) {
-                    deviationsArrayLastValid1h.add(autosensData.nonEqualDeviation ? autosensData.deviation : 0d);
-                    deviationsArrayLastValid4h.add(autosensData.nonEqualDeviation ? autosensData.deviation : 0d);
-                    if (deviationsArrayLastValid1h.size() > 60 / 5)
-                        deviationsArrayLastValid1h.remove(0);
-                    if (deviationsArrayLastValid4h.size() > 4 * 60 / 5)
-                        deviationsArrayLastValid4h.remove(0);
-                }
-
-                pastSensitivity += autosensData.pastSensitivity;
-                int secondsFromMidnight = NSProfile.secondsFromMidnight(autosensData.time);
-                if (secondsFromMidnight % 3600 < 2.5 * 60 || secondsFromMidnight % 3600 > 57.5 * 60) {
-                    pastSensitivity += "(" + Math.round(secondsFromMidnight / 3600d) + ")";
-                }
-                index++;
-            }
-
-            Double[] deviations24 = new Double[deviationsArray24h.size()];
-            deviations24 = deviationsArray24h.toArray(deviations24);
-            Double[] deviations4 = new Double[deviationsArray4h.size()];
-            deviations4 = deviationsArray4h.toArray(deviations4);
-            Double[] deviationsLastValid1h = new Double[deviationsArrayLastValid1h.size()];
-            deviationsLastValid1h = deviationsArrayLastValid1h.toArray(deviationsLastValid1h);
-            Double[] deviationsLastValid4h = new Double[deviationsArrayLastValid4h.size()];
-            deviationsLastValid4h = deviationsArrayLastValid4h.toArray(deviationsLastValid4h);
-
-            String ratioLimit = "";
-            String sensResult = "";
-
-            log.debug("Records: " + index + "   " + pastSensitivity);
-            Arrays.sort(deviations24);
-            Arrays.sort(deviations4);
-            Arrays.sort(deviationsLastValid4h);
-            Arrays.sort(deviationsLastValid1h);
-
-            double percentile24 = percentile(deviations24, 0.50);
-            double basalOff24 = percentile24 * (60 / 5) / NSProfile.toMgdl(sens, profile.getUnits());
-            double ratio24 = 1 + (basalOff24 / profile.getMaxDailyBasal());
-            double basalOff24Avg = average(deviations24) * (60 / 5) / NSProfile.toMgdl(sens, profile.getUnits());
-            double ratio24Avg = 1 + (basalOff24Avg / profile.getMaxDailyBasal());
-
-            double percentile4 = percentile(deviations4, 0.50);
-            double basalOff4 = percentile4 * (60 / 5) / NSProfile.toMgdl(sens, profile.getUnits());
-            double ratio4 = 1 + (basalOff4 / profile.getMaxDailyBasal());
-            double basalOff4Avg = average(deviations4) * (60 / 5) / NSProfile.toMgdl(sens, profile.getUnits());
-            double ratio4Avg = 1 + (basalOff4Avg / profile.getMaxDailyBasal());
-
-            double ratioByCount4hAvg = deviationsLastValid4h.length / (4 * 60 / 5);
-            double percentileLastValid4h = percentile(deviationsLastValid4h, 0.50);
-            double basalOffLastValid4h = percentileLastValid4h * (60 / 5) / NSProfile.toMgdl(sens, profile.getUnits())* ratioByCount4hAvg;
-            double ratioLastValid4h = 1 + (basalOffLastValid4h / profile.getMaxDailyBasal());
-            double basalOffLastValid4hAvg = average(deviationsLastValid4h) * (60 / 5) / NSProfile.toMgdl(sens, profile.getUnits()) * ratioByCount4hAvg;
-            double ratioLastValid4hAvg = 1 + (basalOffLastValid4hAvg / profile.getMaxDailyBasal());
-
-            double ratioByCount1hAvg = deviationsLastValid1h.length / (1 * 60 / 5);
-            double percentileLastValid1h = percentile(deviationsLastValid1h, 0.50);
-            double basalOffLastValid1h = percentileLastValid1h * (60 / 5) / NSProfile.toMgdl(sens, profile.getUnits()) * ratioByCount1hAvg;
-            double ratioLastValid1h = 1 + (basalOffLastValid1h / profile.getMaxDailyBasal());
-            double basalOffLastValid1hAvg = average(deviationsLastValid1h) * (60 / 5) / NSProfile.toMgdl(sens, profile.getUnits()) * ratioByCount1hAvg;
-            double ratioLastValid1hAvg = 1 + (basalOffLastValid1hAvg / profile.getMaxDailyBasal());
-
-            if (percentile24 < 0) { // sensitive
-                sensResult = "Excess insulin sensitivity detected";
-            } else if (percentile24 > 0) { // resistant
-                sensResult = "Excess insulin resistance detected";
-            } else {
-                sensResult = "Sensitivity normal";
-            }
-
-            sensResult += " ... Ratio 24h: " + Round.roundTo(ratio24, 0.001);
-            sensResult += " ... Ratio 4h: " + Round.roundTo(ratio4, 0.001);
-            sensResult += " ... Ratio last 4h: " + Round.roundTo(ratioLastValid4h, 0.001) + " SizeModifier: " + Round.roundTo(ratioByCount4hAvg, 0.001);
-            sensResult += " ... Ratio last 1h: " + Round.roundTo(ratioLastValid1h, 0.001)+ " SizeModifier: " + Round.roundTo(ratioByCount1hAvg, 0.001);
-            sensResult += " ... AvgDeviation  24h: " + Round.roundTo(average(deviations24), 0.001) + " Ratio: " + Round.roundTo(ratio24Avg, 0.001);
-            sensResult += " ... AvgDeviation  4h: " + Round.roundTo(average(deviations4), 0.001) + " Ratio: " + Round.roundTo(ratio4Avg, 0.001);
-            sensResult += " ... AvgDeviation  last 4h: " + Round.roundTo(average(deviationsLastValid4h), 0.001) + " Ratio: " + Round.roundTo(ratioLastValid4hAvg, 0.001)+ " SizeModifier: " + Round.roundTo(ratioByCount4hAvg, 0.001);
-            sensResult += " ... AvgDeviation  last 1h: " + Round.roundTo(average(deviationsLastValid1h), 0.001) + " Ratio: " + Round.roundTo(ratioLastValid1hAvg, 0.001)+ " SizeModifier: " + Round.roundTo(ratioByCount1hAvg, 0.001);
-
-            log.debug(sensResult);
-
-            double rawRatio = ratio24;
-            ratio24 = Math.max(ratio24, SafeParse.stringToDouble(SP.getString("openapsama_autosens_min", "0.7")));
-            ratio24 = Math.min(ratio24, SafeParse.stringToDouble(SP.getString("openapsama_autosens_max", "1.2")));
-
-            if (ratio24 != rawRatio) {
-                ratioLimit = "Ratio limited from " + rawRatio + " to " + ratio24;
-                log.debug(ratioLimit);
-            }
-
-            AutosensResult output = new AutosensResult();
-            output.ratio = Round.roundTo(ratio24, 0.01);
-            output.carbsAbsorbed = Round.roundTo(current.cob, 0.01);
-            output.pastSensitivity = pastSensitivity;
-            output.ratioLimit = ratioLimit;
-            output.sensResult = sensResult;
-            return output;
+        if (autosensDataTable == null || autosensDataTable.size() < 4) {
+            log.debug("No autosens data available");
+            return new AutosensResult();
         }
+
+        AutosensData current = getLastAutosensData();
+        if (current == null) {
+            log.debug("No current autosens data available");
+            return new AutosensResult();
+        }
+
+
+        if (ConfigBuilderPlugin.getActiveProfile() == null || ConfigBuilderPlugin.getActiveProfile().getProfile() == null) {
+            log.debug("No profile available");
+            return new AutosensResult();
+        }
+
+        NSProfile profile = ConfigBuilderPlugin.getActiveProfile().getProfile();
+
+        Double sens = profile.getIsf(NSProfile.secondsFromMidnight());
+
+        if (sens == null || profile.getMaxDailyBasal() == 0) {
+            log.debug("No profile available");
+            return new AutosensResult();
+        }
+
+        List<Double> deviationsArray = new ArrayList<>();
+        String pastSensitivity = "";
+        int index = 0;
+        long now = new Date().getTime();
+
+        while (index < autosensDataTable.size()) {
+            AutosensData autosensData = autosensDataTable.valueAt(index);
+
+            if (autosensData.time < fromTime) {
+                index++;
+                continue;
+            }
+
+            if (autosensData.time > now - hoursForDetection * 60 * 60 * 1000L)
+                deviationsArray.add(autosensData.nonEqualDeviation ? autosensData.deviation : 0d);
+            if (deviationsArray.size() > hoursForDetection * 60 / 5)
+                deviationsArray.remove(0);
+
+            pastSensitivity += autosensData.pastSensitivity;
+            int secondsFromMidnight = NSProfile.secondsFromMidnight(autosensData.time);
+            if (secondsFromMidnight % 3600 < 2.5 * 60 || secondsFromMidnight % 3600 > 57.5 * 60) {
+                pastSensitivity += "(" + Math.round(secondsFromMidnight / 3600d) + ")";
+            }
+            index++;
+        }
+
+        Double[] deviations = new Double[deviationsArray.size()];
+        deviations = deviationsArray.toArray(deviations);
+
+        String ratioLimit = "";
+        String sensResult = "";
+
+        log.debug("Records: " + index + "   " + pastSensitivity);
+        Arrays.sort(deviations);
+
+        double percentile = percentile(deviations, 0.50);
+        double basalOff = percentile * (60 / 5) / NSProfile.toMgdl(sens, profile.getUnits());
+        double ratio = 1 + (basalOff / profile.getMaxDailyBasal());
+
+        if (percentile < 0) { // sensitive
+            sensResult = "Excess insulin sensitivity detected";
+        } else if (percentile > 0) { // resistant
+            sensResult = "Excess insulin resistance detected";
+        } else {
+            sensResult = "Sensitivity normal";
+        }
+
+        log.debug(sensResult);
+
+        double rawRatio = ratio;
+        ratio = Math.max(ratio, SafeParse.stringToDouble(SP.getString("openapsama_autosens_min", "0.7")));
+        ratio = Math.min(ratio, SafeParse.stringToDouble(SP.getString("openapsama_autosens_max", "1.2")));
+
+        if (ratio != rawRatio) {
+            ratioLimit = "Ratio limited from " + rawRatio + " to " + ratio;
+            log.debug(ratioLimit);
+        }
+
+        AutosensResult output = new AutosensResult();
+        output.ratio = Round.roundTo(ratio, 0.01);
+        output.carbsAbsorbed = Round.roundTo(current.cob, 0.01);
+        output.pastSensitivity = pastSensitivity;
+        output.ratioLimit = ratioLimit;
+        output.sensResult = sensResult;
+        return output;
         //log.debug("Releasing detectSensitivity");
     }
 
@@ -662,6 +641,6 @@ public class IobCobCalculatorPlugin implements PluginBase {
         for (int i = 0; i < arr.length; i++) {
             sum += arr[i];
         }
-        return sum /arr.length;
+        return sum / arr.length;
     }
 }

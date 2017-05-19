@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:validate="http://schemas.android.com/apk/res-auto">
     <PreferenceCategory
         android:key="openapsama"
         android:title="@string/openapsama">
@@ -10,5 +11,19 @@
             android:title="@string/openapsama_useautosens" />
 
     </PreferenceCategory>
+    <com.andreabaccega.widget.ValidatingEditTextPreference
+        android:dependency="openapsama_useautosens"
+        validate:testType="numericRange"
+        validate:minNumber="4"
+        validate:maxNumber="24"
+        android:digits="0123456789"
+        android:defaultValue="24"
+        android:selectAllOnFocus="true"
+        android:singleLine="true"
+        android:inputType="number"
+        android:maxLines="20"
+        android:title="@string/openapsama_autosens_period"
+        android:dialogMessage="@string/openapsama_autosens_period_summary"
+        android:key="@string/key_openapsama_autosens_period" />
 
 </PreferenceScreen>
