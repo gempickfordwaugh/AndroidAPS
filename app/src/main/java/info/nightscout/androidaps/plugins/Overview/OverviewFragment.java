@@ -155,6 +155,7 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
     CheckBox showIobView;
     CheckBox showCobView;
     CheckBox showDeviationsView;
+    CheckBox showRatiosView;
 
     RecyclerView notificationsView;
     LinearLayoutManager llm;
@@ -258,16 +259,19 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
         showIobView = (CheckBox) view.findViewById(R.id.overview_showiob);
         showCobView = (CheckBox) view.findViewById(R.id.overview_showcob);
         showDeviationsView = (CheckBox) view.findViewById(R.id.overview_showdeviations);
+        showRatiosView = (CheckBox) view.findViewById(R.id.overview_showratios);
         showPredictionView.setChecked(SP.getBoolean("showprediction", false));
         showBasalsView.setChecked(SP.getBoolean("showbasals", false));
         showIobView.setChecked(SP.getBoolean("showiob", false));
         showCobView.setChecked(SP.getBoolean("showcob", false));
         showDeviationsView.setChecked(SP.getBoolean("showdeviations", false));
+        showRatiosView.setChecked(SP.getBoolean("showratios", false));
         showPredictionView.setOnCheckedChangeListener(this);
         showBasalsView.setOnCheckedChangeListener(this);
         showIobView.setOnCheckedChangeListener(this);
         showCobView.setOnCheckedChangeListener(this);
         showDeviationsView.setOnCheckedChangeListener(this);
+        showRatiosView.setOnCheckedChangeListener(this);
 
         notificationsView = (RecyclerView) view.findViewById(R.id.overview_notifications);
         notificationsView.setHasFixedSize(true);
@@ -328,34 +332,41 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
         switch (buttonView.getId()) {
             case R.id.overview_showprediction:
-                SP.putBoolean("showprediction", showPredictionView.isChecked());
-                scheduleUpdateGUI("onPredictionCheckedChanged");
-                break;
             case R.id.overview_showbasals:
-                SP.putBoolean("showbasals", showPredictionView.isChecked());
-                scheduleUpdateGUI("onBasalsCheckedChanged");
-                break;
             case R.id.overview_showiob:
-                SP.putBoolean("showiob", showIobView.isChecked());
-                scheduleUpdateGUI("onIobCheckedChanged");
                 break;
             case R.id.overview_showcob:
                 showDeviationsView.setOnCheckedChangeListener(null);
                 showDeviationsView.setChecked(false);
                 showDeviationsView.setOnCheckedChangeListener(this);
-                SP.putBoolean("showcob", showCobView.isChecked());
-                SP.putBoolean("showdeviations", showDeviationsView.isChecked());
-                scheduleUpdateGUI("onCobCheckedChanged");
+                showRatiosView.setOnCheckedChangeListener(null);
+                showRatiosView.setChecked(false);
+                showRatiosView.setOnCheckedChangeListener(this);
                 break;
             case R.id.overview_showdeviations:
                 showCobView.setOnCheckedChangeListener(null);
                 showCobView.setChecked(false);
                 showCobView.setOnCheckedChangeListener(this);
-                SP.putBoolean("showcob", showCobView.isChecked());
-                SP.putBoolean("showdeviations", showDeviationsView.isChecked());
-                scheduleUpdateGUI("onDeviationsCheckedChanged");
+                showRatiosView.setOnCheckedChangeListener(null);
+                showRatiosView.setChecked(false);
+                showRatiosView.setOnCheckedChangeListener(this);
+                break;
+            case R.id.overview_showratios:
+                showDeviationsView.setOnCheckedChangeListener(null);
+                showDeviationsView.setChecked(false);
+                showDeviationsView.setOnCheckedChangeListener(this);
+                showCobView.setOnCheckedChangeListener(null);
+                showCobView.setChecked(false);
+                showCobView.setOnCheckedChangeListener(this);
                 break;
         }
+        SP.putBoolean("showiob", showIobView.isChecked());
+        SP.putBoolean("showprediction", showPredictionView.isChecked());
+        SP.putBoolean("showbasals", showPredictionView.isChecked());
+        SP.putBoolean("showcob", showCobView.isChecked());
+        SP.putBoolean("showdeviations", showDeviationsView.isChecked());
+        SP.putBoolean("showratios", showRatiosView.isChecked());
+        scheduleUpdateGUI("onGraphCheckboxesCheckedChanged");
     }
 
     @Override
@@ -1167,22 +1178,25 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
         FixedLineGraphSeries<DataPoint> iobSeries;
         FixedLineGraphSeries<DataPoint> cobSeries;
         BarGraphSeries<DeviationDataPoint> devSeries;
+        LineGraphSeries<DataPoint> ratioSeries;
         Double maxIobValueFound = 0d;
         Double maxCobValueFound = 0d;
         Double maxDevValueFound = 0d;
+        Double maxRatioValueFound = 0d;
 
-        if (showIobView.isChecked() || showCobView.isChecked() || showDeviationsView.isChecked()) {
+        if (showIobView.isChecked() || showCobView.isChecked() || showDeviationsView.isChecked() || showRatiosView.isChecked()) {
             //Date start = new Date();
             List<DataPoint> iobArray = new ArrayList<>();
             List<DataPoint> cobArray = new ArrayList<>();
             List<DeviationDataPoint> devArray = new ArrayList<>();
+            List<DataPoint> ratioArray = new ArrayList<>();
             for (long time = fromTime; time <= now; time += 5 * 60 * 1000L) {
                 if (showIobView.isChecked()) {
                     IobTotal iob = IobCobCalculatorPlugin.calulateFromTreatmentsAndTemps(time);
                     iobArray.add(new DataPoint(time, iob.iob));
                     maxIobValueFound = Math.max(maxIobValueFound, Math.abs(iob.iob));
                 }
-                if (showCobView.isChecked() || showDeviationsView.isChecked()) {
+                if (showCobView.isChecked() || showDeviationsView.isChecked() || showRatiosView.isChecked()) {
                     AutosensData autosensData = IobCobCalculatorPlugin.getAutosensData(time);
                     if (autosensData != null && showCobView.isChecked()) {
                         cobArray.add(new DataPoint(time, autosensData.cob));
@@ -1196,6 +1210,10 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
                         devArray.add(new DeviationDataPoint(time, autosensData.deviation, color));
                         maxDevValueFound = Math.max(maxDevValueFound, Math.abs(autosensData.deviation));
                     }
+                    if (autosensData != null && showRatiosView.isChecked()) {
+                        ratioArray.add(new DataPoint(time, autosensData.autosensRatio));
+                        maxRatioValueFound = Math.max(maxRatioValueFound, Math.abs(autosensData.autosensRatio));
+                    }
                 }
             }
             //Profiler.log(log, "IOB processed", start);
@@ -1208,17 +1226,22 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
             iobSeries.setThickness(3);
 
 
-            if (showIobView.isChecked() && (showCobView.isChecked() || showDeviationsView.isChecked())) {
+            if (showIobView.isChecked() && (showCobView.isChecked() || showDeviationsView.isChecked() || showRatiosView.isChecked())) {
                 List<DataPoint> cobArrayRescaled = new ArrayList<>();
                 List<DeviationDataPoint> devArrayRescaled = new ArrayList<>();
+                List<DataPoint> ratioArrayRescaled = new ArrayList<>();
                 for (int ci = 0; ci < cobArray.size(); ci++) {
                     cobArrayRescaled.add(new DataPoint(cobArray.get(ci).getX(), cobArray.get(ci).getY() * maxIobValueFound / maxCobValueFound / 2));
                 }
                 for (int ci = 0; ci < devArray.size(); ci++) {
                     devArrayRescaled.add(new DeviationDataPoint(devArray.get(ci).getX(), devArray.get(ci).getY() * maxIobValueFound / maxDevValueFound, devArray.get(ci).color));
                 }
+                for (int ci = 0; ci < ratioArray.size(); ci++) {
+                    ratioArrayRescaled.add(new DataPoint(ratioArray.get(ci).getX(), ratioArray.get(ci).getY() * maxIobValueFound / maxRatioValueFound));
+                }
                 cobArray = cobArrayRescaled;
                 devArray = devArrayRescaled;
+                ratioArray = ratioArrayRescaled;
             }
             // COB
             DataPoint[] cobData = new DataPoint[cobArray.size()];
@@ -1239,9 +1262,13 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
                     return data.color;
                 }
             });
-            //devSeries.setBackgroundColor(0xB0FFFFFF & MainApp.sResources.getColor(R.color.cob)); //50%
-            //devSeries.setColor(MainApp.sResources.getColor(R.color.cob));
-            //devSeries.setThickness(3);
+
+            // RATIOS
+            DataPoint[] ratioData = new DataPoint[ratioArray.size()];
+            ratioData = ratioArray.toArray(ratioData);
+            ratioSeries = new LineGraphSeries<>(ratioData);
+            ratioSeries.setColor(MainApp.sResources.getColor(R.color.ratio));
+            ratioSeries.setThickness(3);
 
             iobGraph.removeAllSeries();
 
@@ -1253,6 +1280,9 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
             }
             if (showDeviationsView.isChecked() && devData.length > 0) {
                 iobGraph.addSeries(devSeries);
+            }
+            if (showRatiosView.isChecked() && ratioData.length > 0) {
+                iobGraph.addSeries(ratioSeries);
             }
             iobGraph.setVisibility(View.VISIBLE);
         } else {
