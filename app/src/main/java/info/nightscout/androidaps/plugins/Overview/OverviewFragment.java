@@ -206,7 +206,7 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
 
         View view;
 
-        if(smallHeight){
+        if (smallHeight) {
             view = inflater.inflate(R.layout.overview_fragment_smallheight, container, false);
         } else {
             view = inflater.inflate(R.layout.overview_fragment, container, false);
@@ -214,7 +214,7 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
 
         bgView = (TextView) view.findViewById(R.id.overview_bg);
         arrowView = (TextView) view.findViewById(R.id.overview_arrow);
-        if(smallWidth){
+        if (smallWidth) {
             arrowView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 35);
         }
         timeAgoView = (TextView) view.findViewById(R.id.overview_timeago);
@@ -339,25 +339,13 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
                 showDeviationsView.setOnCheckedChangeListener(null);
                 showDeviationsView.setChecked(false);
                 showDeviationsView.setOnCheckedChangeListener(this);
-                showRatiosView.setOnCheckedChangeListener(null);
-                showRatiosView.setChecked(false);
-                showRatiosView.setOnCheckedChangeListener(this);
                 break;
             case R.id.overview_showdeviations:
                 showCobView.setOnCheckedChangeListener(null);
                 showCobView.setChecked(false);
                 showCobView.setOnCheckedChangeListener(this);
-                showRatiosView.setOnCheckedChangeListener(null);
-                showRatiosView.setChecked(false);
-                showRatiosView.setOnCheckedChangeListener(this);
                 break;
             case R.id.overview_showratios:
-                showDeviationsView.setOnCheckedChangeListener(null);
-                showDeviationsView.setChecked(false);
-                showDeviationsView.setOnCheckedChangeListener(this);
-                showCobView.setOnCheckedChangeListener(null);
-                showCobView.setChecked(false);
-                showCobView.setOnCheckedChangeListener(this);
                 break;
         }
         SP.putBoolean("showiob", showIobView.isChecked());
@@ -1047,7 +1035,8 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
             getActivity().findViewById(R.id.overview_showprediction_label).setVisibility(View.VISIBLE);
         } else {
             showPredictionView.setVisibility(View.GONE);
-            getActivity().findViewById(R.id.overview_showprediction_label).setVisibility(View.GONE);        }
+            getActivity().findViewById(R.id.overview_showprediction_label).setVisibility(View.GONE);
+        }
 
         // ****** GRAPH *******
 
@@ -1170,6 +1159,7 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
         // **** IOB COB DEV graph ****
         class DeviationDataPoint extends DataPoint {
             public int color;
+
             public DeviationDataPoint(double x, double y, int color) {
                 super(x, y);
                 this.color = color;
@@ -1225,24 +1215,50 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
             iobSeries.setColor(MainApp.sResources.getColor(R.color.iob));
             iobSeries.setThickness(3);
 
-
-            if (showIobView.isChecked() && (showCobView.isChecked() || showDeviationsView.isChecked() || showRatiosView.isChecked())) {
-                List<DataPoint> cobArrayRescaled = new ArrayList<>();
-                List<DeviationDataPoint> devArrayRescaled = new ArrayList<>();
-                List<DataPoint> ratioArrayRescaled = new ArrayList<>();
-                for (int ci = 0; ci < cobArray.size(); ci++) {
-                    cobArrayRescaled.add(new DataPoint(cobArray.get(ci).getX(), cobArray.get(ci).getY() * maxIobValueFound / maxCobValueFound / 2));
-                }
-                for (int ci = 0; ci < devArray.size(); ci++) {
-                    devArrayRescaled.add(new DeviationDataPoint(devArray.get(ci).getX(), devArray.get(ci).getY() * maxIobValueFound / maxDevValueFound, devArray.get(ci).color));
-                }
-                for (int ci = 0; ci < ratioArray.size(); ci++) {
-                    ratioArrayRescaled.add(new DataPoint(ratioArray.get(ci).getX(), ratioArray.get(ci).getY() * maxIobValueFound / maxRatioValueFound));
-                }
-                cobArray = cobArrayRescaled;
-                devArray = devArrayRescaled;
-                ratioArray = ratioArrayRescaled;
+            Double maxByScale = null;
+            int graphsToShow = 0;
+            if (showIobView.isChecked()) {
+                if (maxByScale == null) maxByScale = maxIobValueFound;
+                graphsToShow++;
             }
+            if (showCobView.isChecked()) {
+                if (maxByScale == null) maxByScale = maxCobValueFound;
+                graphsToShow++;
+            }
+            if (showDeviationsView.isChecked()) {
+                if (maxByScale == null) maxByScale = maxDevValueFound;
+                graphsToShow++;
+            }
+            if (showRatiosView.isChecked()) {
+                if (maxByScale == null) maxByScale = maxRatioValueFound;
+                graphsToShow++;
+            }
+
+            if (graphsToShow > 1) {
+                if (!maxByScale.equals(maxCobValueFound)) {
+                    List<DataPoint> cobArrayRescaled = new ArrayList<>();
+                    for (int ci = 0; ci < cobArray.size(); ci++) {
+                        cobArrayRescaled.add(new DataPoint(cobArray.get(ci).getX(), cobArray.get(ci).getY() * maxByScale / maxCobValueFound / 2));
+                    }
+                    cobArray = cobArrayRescaled;
+                }
+                if (!maxByScale.equals(maxDevValueFound)) {
+                    List<DeviationDataPoint> devArrayRescaled = new ArrayList<>();
+                    for (int ci = 0; ci < devArray.size(); ci++) {
+                        devArrayRescaled.add(new DeviationDataPoint(devArray.get(ci).getX(), devArray.get(ci).getY() * maxByScale / maxDevValueFound, devArray.get(ci).color));
+                    }
+                    devArray = devArrayRescaled;
+                }
+                if (!maxByScale.equals(maxRatioValueFound)) {
+                    List<DataPoint> ratioArrayRescaled = new ArrayList<>();
+                    for (int ci = 0; ci < ratioArray.size(); ci++) {
+                        ratioArrayRescaled.add(new DataPoint(ratioArray.get(ci).getX(), ratioArray.get(ci).getY() * maxByScale / maxRatioValueFound));
+                    }
+                    ratioArray = ratioArrayRescaled;
+                }
+            }
+
+
             // COB
             DataPoint[] cobData = new DataPoint[cobArray.size()];
             cobData = cobArray.toArray(cobData);
