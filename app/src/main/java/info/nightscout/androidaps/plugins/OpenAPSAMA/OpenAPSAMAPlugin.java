@@ -224,7 +224,7 @@ public class OpenAPSAMAPlugin implements PluginBase, APSInterface {
 
         startPart = new Date();
         if(MainApp.getConfigBuilder().isAMAModeEnabled()){
-            lastAutosensResult = IobCobCalculatorPlugin.detectSensitivityWithLock(IobCobCalculatorPlugin.oldestDataAvailable());
+            lastAutosensResult = IobCobCalculatorPlugin.detectSensitivityWithLock(IobCobCalculatorPlugin.oldestDataAvailable(), new Date().getTime());
         } else {
             lastAutosensResult = new AutosensResult();
         }

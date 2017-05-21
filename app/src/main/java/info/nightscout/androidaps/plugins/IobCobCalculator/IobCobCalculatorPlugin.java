@@ -327,7 +327,7 @@ public class IobCobCalculatorPlugin implements PluginBase {
 
                 previous = autosensData;
                 autosensDataTable.put(bgTime, autosensData);
-                autosensData.autosensRatio = detectSensitivity(oldestTimeWithData).ratio;
+                autosensData.autosensRatio = detectSensitivity(oldestTimeWithData, bgTime).ratio;
                 log.debug(autosensData.log(bgTime));
             }
         }
@@ -386,17 +386,6 @@ public class IobCobCalculatorPlugin implements PluginBase {
         }
     }
 
-    public static AutosensData getLastAutosensData() {
-        if (autosensDataTable.size() < 1)
-            return null;
-        AutosensData data = autosensDataTable.valueAt(autosensDataTable.size() - 1);
-        if (data.time < new Date().getTime() - 5 * 60 * 1000) {
-            return null;
-        } else {
-            return data;
-        }
-    }
-
     public static IobTotal[] calculateIobArrayInDia() {
         NSProfile profile = ConfigBuilderPlugin.getActiveProfile().getProfile();
         // predict IOB out to DIA plus 30m
@@ -429,13 +418,13 @@ public class IobCobCalculatorPlugin implements PluginBase {
         return getBGDataFrom;
     }
 
-    public static AutosensResult detectSensitivityWithLock(long fromTime) {
+    public static AutosensResult detectSensitivityWithLock(long fromTime, long toTime) {
         synchronized (dataLock) {
-            return detectSensitivity(fromTime);
+            return detectSensitivity(fromTime, toTime);
         }
     }
 
-    public static AutosensResult detectSensitivity(long fromTime) {
+    public static AutosensResult detectSensitivity(long fromTime, long toTime) {
         //log.debug("Locking detectSensitivity");
         String age = SP.getString(R.string.key_age, "");
         int defaultHours = 24;
@@ -450,9 +439,9 @@ public class IobCobCalculatorPlugin implements PluginBase {
             return new AutosensResult();
         }
 
-        AutosensData current = getLastAutosensData();
+        AutosensData current = getAutosensData(toTime);
         if (current == null) {
-            log.debug("No current autosens data available");
+            log.debug("No autosens data available");
             return new AutosensResult();
         }
 
@@ -480,6 +469,11 @@ public class IobCobCalculatorPlugin implements PluginBase {
             AutosensData autosensData = autosensDataTable.valueAt(index);
 
             if (autosensData.time < fromTime) {
+                index++;
+                continue;
+            }
+
+            if (autosensData.time > toTime) {
                 index++;
                 continue;
             }
