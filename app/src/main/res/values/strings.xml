@@ -614,4 +614,6 @@
     <string name="stopevent">STOP</string>
     <string name="extendedbolus">ExtendedBolus</string>
     <string name="temptarget">TempTarget</string>
+    <string name="combopump">Accu-Chek Combo</string>
+    <string name="combopump_settings">Accu-Chek Combo settings</string>
 </resources>
