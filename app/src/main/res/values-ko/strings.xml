@@ -62,7 +62,7 @@
     <string name="openapsma_iobdata_label">IOB 데이터</string>
     <string name="openapsma_profile_label">프로파일</string>
     <string name="openapsma_mealdata_label">식사 데이터</string>
-    <string name="openapsma_result_label">결과</string>
+    <string name="result">결과</string>
     <string name="openapsma_noglucosedata">혈당 데이터 없음</string>
     <string name="openapsma_noprofile">프로파일 없음</string>
     <string name="openapsma_nopump">No pump available</string>
@@ -82,7 +82,6 @@
     <string name="overview">Overview</string>
     <string name="profileviewer">NS 프로파일</string>
     <string name="simpleprofile">Simple 프로파일</string>
-    <string name="tempbasals">임시기초주입</string>
     <string name="treatments">Treatments</string>
     <string name="virtualpump">가상펌프</string>
     <string name="careportal">Careportal</string>
@@ -101,8 +100,6 @@
     <string name="loop_constraintsprocessed_label">After processed constraints</string>
     <string name="loop_setbypump_label">Set by pump</string>
     <string name="openapsma_lastenact_label">최근 주입</string>
-    <string name="refreshtreatmentsfromnightscout">나이트스카우트에서 Treatments를 새로고치시겠습니까</string>
-    <string name="refreshtemptargetsfromnightscout">나이트스카우트에서 Temp Target을 새로고치시겠습니까</string>
     <string name="ok">OK</string>
     <string name="cancel">취소</string>
     <string name="noapsselected">NO APS SELECTED OR PROVIDED RESULT</string>
@@ -111,7 +108,7 @@
     <string name="constraints_violation">제한 위반</string>
     <string name="treatmentdeliveryerror">식사주입 전송 에러</string>
     <string name="tempbasaldeliveryerror">Tempbasal delivery error</string>
-    <string name="overview_newtempbasal_basal_label">기초주입 값</string>
+    <string name="overview_newtempbasal_basalpercent">기초주입 값 [%]</string>
     <string name="overview_newtempbasal_percent_label">% (100% = 현재)</string>
     <string name="setbasalquestion">새 임시기초주입 적용:</string>
     <string name="overview_bolus_label">식사주입</string>
@@ -174,7 +171,6 @@
     <string name="careportal_newnstreatment_duration_label">Duration</string>
     <string name="careportal_newnstreatment_percent_label">Percent</string>
     <string name="careportal_newnstreatment_absolute_label">Absolute</string>
-    <string name="careportal_newnstreatment_minutes">min</string>
     <string name="careportal_newnstreatment_notes_label">Notes</string>
     <string name="careportal_newnstreatment_eventtime_label">Event time</string>
     <string name="careportal_newnstreatment_profile_label">Profile</string>
@@ -183,7 +179,6 @@
     <string name="noprofile">아직 NS에서 프로파일을 로드하지 못했습니다.</string>
     <string name="overview_tempbasal_button">임시기초주입</string>
     <string name="overview_extendedbolus_button">확장식사주입</string>
-    <string name="configbuilder_nsclientversion_label">NSClient 버전:</string>
     <string name="configbuilder_nightscoutversion_label">Nightscout 버전:</string>
     <string name="send">보내기</string>
     <string name="missing">Missing</string>
@@ -340,7 +335,6 @@
     <string name="androidaps_start">AndroidAPS 시작</string>
     <string name="ns_upload_only">NS upload only (disabled sync)</string>
     <string name="ns_upload_only_summary">NS upload only. 로컬소스(xDrip)가 선택되지 않으면 SGV에는 효력이 없습니다. NS프로파일이 사용중이라면 프로파일에는 효력이 없습니다.</string>
-    <string name="ns_upload_only_enabled">이 기능을 사용하시려면 "NS upload only"을 비활성화 하세요.</string>
     <string name="pumpNotInitialized">펌프가 초기화 되지 않았습니다!</string>
     <string name="pumpNotInitializedProfileNotSet">펌프가 초기화와 프로파일 설정이 되지 않았습니다!</string>
     <string name="primefill">공기/채움</string>
@@ -363,8 +357,6 @@
     <string name="edit_base_ic">Edit Base-IC:</string>
     <string name="base_profile_label">Base Profile:</string>
     <string name="circadian_percentage_profile">CircadianPercentageProfile</string>
-    <string name="androidaps_tempbasalendnote">Basal Temp End</string>
-    <string name="androidaps_tempbasalstartnote">Basal Temp Start</string>
     <string name="prefs_range_title">차트 표시 범위</string>
     <string name="prefs_range_summary">Overview/스마트워치 차트 표시용 고/저혈당 선</string>
     <string name="low_mark">저혈당 선</string>
@@ -401,8 +393,6 @@
     <string name="openapsma_autosensdata_label">Autosens data</string>
     <string name="openapsma_scriptdebugdata_label">Script debug</string>
     <string name="openapsama_useautosens">AMA autosens 기능 사용하기</string>
-    <string name="temptargetrange">Temp Target</string>
-    <string name="temptargetrange_refreshfromnightscout">Refresh temp targets from NS</string>
     <string name="eatingsoon">Eating Soon</string>
     <string name="activity">Activity</string>
     <string name="removerecord">Remove record:</string>
@@ -522,4 +512,5 @@
     <string name="adult">성인</string>
     <string name="patientage_summary">안전제한을 설정하기 위해 당뇨인의 나이를 선택하세요</string>
     <string name="it_lang">Italian</string>
+    <string name="app_name">AndroidAPS</string>
 </resources>
