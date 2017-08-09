@@ -359,6 +359,7 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
                 menu.add(MainApp.sResources.getString(R.string.suspendloopfor2h));
                 menu.add(MainApp.sResources.getString(R.string.suspendloopfor3h));
                 menu.add(MainApp.sResources.getString(R.string.suspendloopfor10h));
+                menu.add(MainApp.sResources.getString(R.string.disconnectpumpfor15m));
                 menu.add(MainApp.sResources.getString(R.string.disconnectpumpfor30m));
                 menu.add(MainApp.sResources.getString(R.string.disconnectpumpfor1h));
                 menu.add(MainApp.sResources.getString(R.string.disconnectpumpfor2h));
@@ -495,6 +496,21 @@ public class OverviewFragment extends Fragment implements View.OnClickListener, 
                 }
             });
             NSUpload.uploadOpenAPSOffline(600);
+            return true;
+        } else if (item.getTitle().equals(MainApp.sResources.getString(R.string.disconnectpumpfor15m))) {
+            activeloop.suspendTo(System.currentTimeMillis() + 15L * 60 * 1000);
+            updateGUI("suspendmenu");
+            sHandler.post(new Runable() {
+                @Override
+                public void run() {
+                    MainApp.getConfigBuilder().cancelTempBasal(true);
+                    PumpEnactResult result = MainApp.getConfigbuilder().setTempBasalAbsolute(0d, 15);
+                    if (!result.success) {
+                        ToastUtils.showToastInUiThread(MainApp.instance().getApplicationContext(), MainApp.sResources.getString(R.string.tempbasaldeliveryerror));
+                    }
+                }
+            });
+            NSUpload.uploadOpenAPSOffline(15);
             return true;
         } else if (item.getTitle().equals(MainApp.sResources.getString(R.string.disconnectpumpfor30m))) {
             activeloop.suspendTo(System.currentTimeMillis() + 30L * 60 * 1000);
